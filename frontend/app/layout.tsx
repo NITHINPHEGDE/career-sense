@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
   title: "CareerAI - ML-Powered Salary & Career Insights",
   description:
     "Predict your salary and get AI-powered career insights based on machine learning analysis of market data",
-  generator: "v0.app",
+  
   icons: {
     icon: [
       {
@@ -53,7 +52,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased`}>
         {children}
-        <Analytics />
+       
       </body>
     </html>
   )
