@@ -4,32 +4,53 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+
+    // 🔥 STRICT payload normalization (fixes 422)
+    const payload = {
+      rating: Number(data.rating),
+      experience_years: Number(data.experience_years),
+      employment_status: String(data.employment_status),
+      location: String(data.location),
+      company_size: String(data.company_size),
+      job_roles: String(data.job_roles),
+      skills: String(data.skills ?? ""),
+    }
+
+    // Optional safety check
+    if (
+      Number.isNaN(payload.rating) ||
+      Number.isNaN(payload.experience_years)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid numeric input" },
+        { status: 400 }
+      )
+    }
 
     const response = await fetch(`${backendUrl}/predict`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-  rating: data.rating,
-  experience_years: data.experience_years,
-  employment_status: data.employment_status, // OK
-  location: data.location,                   // OK
-  company_size: data.company_size,
-  job_roles: data.job_roles,                  // 🔥 FIX HERE
-  skills: data.skills,
-}),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
 
+    const text = await response.text()
+
     if (!response.ok) {
-      throw new Error("Backend prediction failed")
+      console.error("BACKEND ERROR:", text)
+      return NextResponse.json(
+        { error: text },
+        { status: response.status }
+      )
     }
 
-    const result = await response.json()
-    return NextResponse.json(result)
+    return NextResponse.json(JSON.parse(text))
   } catch (error) {
     console.error("Prediction error:", error)
-    return NextResponse.json({ error: "Prediction failed" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Prediction failed" },
+      { status: 500 }
+    )
   }
 }
