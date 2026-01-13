@@ -48,10 +48,15 @@ def add_skill_features(df):
     return df
 
 
-def build_features(df):
+def build_features(df,mode="train"):
     df = clean_data(df)
     df = add_job_category(df)
     df = add_skill_features(df)
     df = encode_categorical(df)
     df = cast_to_int(df)
-    return df
+    if mode == "train":
+        y = df["Salary"]
+        X = df.drop(columns=["Salary"])
+        return X, y
+    else:
+        return df, None
