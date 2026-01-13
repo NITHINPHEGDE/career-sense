@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-
 from ml.inference.predict import predict
 
-app = FastAPI(title="CareerSense Salary Predictor")
+app = FastAPI()
 
-# Input schema
 class PredictionInput(BaseModel):
     Employment_Status: str
     Location: str
@@ -13,11 +11,9 @@ class PredictionInput(BaseModel):
     Job_Roles: str
     skills: str
 
-
 @app.get("/")
-def health_check():
-    return {"status": "running"}
-
+def health():
+    return {"status": "ok"}
 
 @app.post("/predict")
 def predict_salary(data: PredictionInput):
@@ -26,11 +22,9 @@ def predict_salary(data: PredictionInput):
         "Location": data.Location,
         "company_size": data.company_size,
         "Job Roles": data.Job_Roles,
-        "skills": data.skills
+        "skills": data.skills,
     }
 
     salary = predict(input_dict)
 
-    return {
-        "predicted_salary": float(round(salary, 2))
-    }
+    return {"predicted_salary": float(salary)}
