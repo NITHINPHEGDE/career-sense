@@ -19,11 +19,14 @@ def predict(input_dict):
     return model.predict(X_scaled)[0][0]
 
 sample = {
+    "rating": 4.2,
+    "experience_years": 3,
     "Employment Status": "Full Time",
     "Location": "Mumbai",
     "company_size": "Mid",
     "Job Roles": "Backend Engineer",
     "skills": "python, sql, django"
 }
+
 
 print(predict(sample))

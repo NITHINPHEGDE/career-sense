@@ -5,10 +5,12 @@ from ml.inference.predict import predict
 app = FastAPI()
 
 class PredictionInput(BaseModel):
-    Employment_Status: str
-    Location: str
+    rating: float
+    experience_years: int
+    employment_status: str
+    location: str
     company_size: str
-    Job_Roles: str
+    job_roles: str
     skills: str
 
 @app.get("/")
@@ -18,13 +20,14 @@ def health():
 @app.post("/predict")
 def predict_salary(data: PredictionInput):
     input_dict = {
-        "Employment Status": data.Employment_Status,
-        "Location": data.Location,
+        "rating": data.rating,
+        "experience_years": data.experience_years,
+        "Employment Status": data.employment_status,
+        "Location": data.location,
         "company_size": data.company_size,
-        "Job Roles": data.Job_Roles,
+        "Job Roles": data.job_roles,
         "skills": data.skills,
     }
 
     salary = predict(input_dict)
-
     return {"predicted_salary": float(salary)}
