@@ -12,14 +12,14 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        rating: data.rating,
-        experience_years: data.experience_years,
-        employment_status: data.employment_status,
-        location: data.location,
-        company_size: data.company_size,
-        job_category: data.job_category,
-        skills: data.skills,
-      }),
+  rating: data.rating,
+  experience_years: data.experience_years,
+  employment_status: data.employment_status, // OK
+  location: data.location,                   // OK
+  company_size: data.company_size,
+  job_roles: data.job_roles,                  // 🔥 FIX HERE
+  skills: data.skills,
+}),
     })
 
     if (!response.ok) {

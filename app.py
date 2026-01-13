@@ -17,8 +17,14 @@ class PredictionInput(BaseModel):
 def health():
     return {"status": "ok"}
 
+@app.get("/warmup")
+def warmup():
+    return {"status": "warmed"}
+
 @app.post("/predict")
 def predict_salary(data: PredictionInput):
+    print("RAW DATA:", data.dict())
+
     input_dict = {
         "rating": data.rating,
         "experience_years": data.experience_years,
@@ -29,5 +35,9 @@ def predict_salary(data: PredictionInput):
         "skills": data.skills,
     }
 
-    salary = predict(input_dict)
-    return {"predicted_salary": float(salary)}
+    try:
+        salary = predict(input_dict)
+        return {"predicted_salary": float(salary)}
+    except Exception as e:
+        print("🔥 BACKEND ERROR:", e)
+        raise
