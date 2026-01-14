@@ -1,4 +1,7 @@
 <h1 align="center">💼 CareerSense — ML-Powered Salary Prediction Platform</h1>
+<br />
+<a href="https://career-sense-b8ah.vercel.app/" target="_blank">🔗 Live Demo</a>
+</h1>
 
 <p align="center">
   <b>Machine Learning • Real-World Inference • Production-Ready • Clean Architecture</b>
@@ -83,4 +86,5 @@ The project focuses on **production correctness**, **clean ML pipelines**, and *
 ---
 
 ## 🏗️ System Architecture
+
 
