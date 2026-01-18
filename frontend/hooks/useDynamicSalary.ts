@@ -10,10 +10,19 @@ export function useDynamicSalary(profile: any) {
 
     async function fetchSalary() {
       try {
+       
+        const payload = {
+          experience_years: profile.experience_years,
+          location: profile.location,
+          company_size: profile.company_size,
+          job_category: profile.job_category,
+          skills: profile.skills,
+        }
+
         const res = await fetch("/api/predict", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profile),
+          body: JSON.stringify(payload),
           signal: controller.signal,
         })
 
@@ -21,7 +30,7 @@ export function useDynamicSalary(profile: any) {
 
         const data = await res.json()
         setSalary(data.predicted_salary)
-      } catch (e) {
+      } catch {
         // silent fail (UI unchanged)
       }
     }
