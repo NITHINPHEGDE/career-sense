@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
 
-    // 🔥 STRICT payload normalization (fixes 422)
+    
     const payload = {
       rating: Number(data.rating),
       experience_years: Number(data.experience_years),
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       skills: String(data.skills ?? ""),
     }
 
-    // Optional safety check
+   
     if (
       Number.isNaN(payload.rating) ||
       Number.isNaN(payload.experience_years)

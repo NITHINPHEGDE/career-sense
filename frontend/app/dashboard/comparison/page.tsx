@@ -1,13 +1,14 @@
 "use client"
 
 import { DashboardLayout } from "@/components/dashboard/layout"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { predictSalary } from "@/lib/api-client"
 
 const LOCATIONS = [
   "Chennai",
@@ -32,6 +33,8 @@ interface Profile {
   job_category: string
   skills: string[]
   salary: number
+  loading?: boolean
+  error?: string
 }
 
 export default function ComparisonPage() {
@@ -42,7 +45,9 @@ export default function ComparisonPage() {
     company_size: "Mid",
     job_category: "backend",
     skills: ["java", "sql"],
-    salary: 1200000,
+    salary: 0,
+    loading: true,
+    error: undefined,
   })
 
   const [profile2, setProfile2] = useState<Profile>({
@@ -52,14 +57,98 @@ export default function ComparisonPage() {
     company_size: "Large",
     job_category: "data",
     skills: ["python", "sql"],
-    salary: 1400000,
+    salary: 0,
+    loading: true,
+    error: undefined,
   })
+
+  const debounceTimers = useRef<{ [key: number]: NodeJS.Timeout }>({})
+
+  // Fetch salary prediction for a profile
+  const fetchSalaryPrediction = async (profile: Profile, profileNum: 1 | 2) => {
+    if (profileNum === 1) {
+      setProfile1((prev) => ({ ...prev, loading: true, error: undefined }))
+    } else {
+      setProfile2((prev) => ({ ...prev, loading: true, error: undefined }))
+    }
+
+    try {
+      const response = await predictSalary({
+        experience_years: profile.experience_years,
+        company_rating: 4, // Default rating for comparison
+        employment_status: "Full-time",
+        location: profile.location,
+        company_size: profile.company_size,
+        job_category: profile.job_category,
+        skills: profile.skills,
+      })
+
+      if (profileNum === 1) {
+        setProfile1((prev) => ({
+          ...prev,
+          salary: response.predicted_salary,
+          loading: false,
+          error: undefined,
+        }))
+      } else {
+        setProfile2((prev) => ({
+          ...prev,
+          salary: response.predicted_salary,
+          loading: false,
+          error: undefined,
+        }))
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to predict salary"
+      if (profileNum === 1) {
+        setProfile1((prev) => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }))
+      } else {
+        setProfile2((prev) => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }))
+      }
+    }
+  }
 
   const updateProfile = (profileNum: 1 | 2, field: string, value: any) => {
     if (profileNum === 1) {
-      setProfile1((prev) => ({ ...prev, [field]: value }))
+      setProfile1((prev) => {
+        const updated = { ...prev, [field]: value }
+        
+        // Clear existing debounce timer
+        if (debounceTimers.current[1]) {
+          clearTimeout(debounceTimers.current[1])
+        }
+        
+        // Debounce API call by 500ms
+        debounceTimers.current[1] = setTimeout(() => {
+          fetchSalaryPrediction(updated, 1)
+        }, 500)
+        
+        return updated
+      })
     } else {
-      setProfile2((prev) => ({ ...prev, [field]: value }))
+      setProfile2((prev) => {
+        const updated = { ...prev, [field]: value }
+        
+        // Clear existing debounce timer
+        if (debounceTimers.current[2]) {
+          clearTimeout(debounceTimers.current[2])
+        }
+        
+        // Debounce API call by 500ms
+        debounceTimers.current[2] = setTimeout(() => {
+          fetchSalaryPrediction(updated, 2)
+        }, 500)
+        
+        return updated
+      })
     }
   }
 
@@ -70,6 +159,12 @@ export default function ComparisonPage() {
       : [...profile.skills, skill]
     updateProfile(profileNum, "skills", newSkills)
   }
+
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchSalaryPrediction(profile1, 1)
+    fetchSalaryPrediction(profile2, 2)
+  }, [])
 
   const salaryDifference = profile2.salary - profile1.salary
   const percentDifference = ((salaryDifference / profile1.salary) * 100).toFixed(1)
@@ -99,34 +194,61 @@ export default function ComparisonPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">{profile1.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div>
-                  <p className="text-3xl font-bold text-primary">₹{profile1.salary.toLocaleString("en-IN")}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Annual Salary</p>
-                </div>
+                {profile1.loading ? (
+                  <div className="space-y-2">
+                    <div className="h-8 bg-muted rounded animate-pulse" />
+                    <p className="text-xs text-muted-foreground">Loading prediction...</p>
+                  </div>
+                ) : profile1.error ? (
+                  <div>
+                    <p className="text-sm text-red-600 dark:text-red-400">{profile1.error}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Try again</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-3xl font-bold text-primary">₹{profile1.salary.toLocaleString("en-IN")}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Annual Salary</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Difference */}
             <Card
-              className={`border-border/50 ${salaryDifference >= 0 ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950"}`}
+              className={`border-border/50 ${
+                profile1.loading || profile2.loading
+                  ? "bg-muted"
+                  : salaryDifference >= 0
+                    ? "bg-green-50 dark:bg-green-950"
+                    : "bg-red-50 dark:bg-red-950"
+              }`}
             >
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Difference</CardTitle>
               </CardHeader>
               <CardContent>
-                <div>
-                  <p
-                    className={`text-3xl font-bold ${salaryDifference >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                  >
-                    {salaryDifference >= 0 ? "+" : ""}
-                    {salaryDifference.toLocaleString("en-IN")}
-                  </p>
-                  <p
-                    className={`text-xs mt-1 ${salaryDifference >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                  >
-                    {percentDifference}% {salaryDifference >= 0 ? "higher" : "lower"}
-                  </p>
-                </div>
+                {profile1.loading || profile2.loading ? (
+                  <div className="space-y-2">
+                    <div className="h-8 bg-muted rounded animate-pulse" />
+                    <p className="text-xs text-muted-foreground">Calculating...</p>
+                  </div>
+                ) : profile1.error || profile2.error ? (
+                  <p className="text-sm text-muted-foreground">Unable to calculate</p>
+                ) : (
+                  <div>
+                    <p
+                      className={`text-3xl font-bold ${salaryDifference >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                    >
+                      {salaryDifference >= 0 ? "+" : ""}
+                      {salaryDifference.toLocaleString("en-IN")}
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${salaryDifference >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                    >
+                      {percentDifference}% {salaryDifference >= 0 ? "higher" : "lower"}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -136,10 +258,22 @@ export default function ComparisonPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">{profile2.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div>
-                  <p className="text-3xl font-bold text-accent">₹{profile2.salary.toLocaleString("en-IN")}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Annual Salary</p>
-                </div>
+                {profile2.loading ? (
+                  <div className="space-y-2">
+                    <div className="h-8 bg-muted rounded animate-pulse" />
+                    <p className="text-xs text-muted-foreground">Loading prediction...</p>
+                  </div>
+                ) : profile2.error ? (
+                  <div>
+                    <p className="text-sm text-red-600 dark:text-red-400">{profile2.error}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Try again</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-3xl font-bold text-accent">₹{profile2.salary.toLocaleString("en-IN")}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Annual Salary</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -249,14 +383,19 @@ function ProfileEditor({
   return (
     <Card className="border-border/50">
       <CardHeader>
-        <CardTitle className="text-lg">
-          <input
-            type="text"
-            value={profile.name}
-            onChange={(e) => onUpdate(profileNum, "name", e.target.value)}
-            className="bg-transparent border-b border-border/50 focus:border-primary outline-none w-full"
-          />
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex-1">
+            <input
+              type="text"
+              value={profile.name}
+              onChange={(e) => onUpdate(profileNum, "name", e.target.value)}
+              className="bg-transparent border-b border-border/50 focus:border-primary outline-none w-full"
+            />
+          </CardTitle>
+          {profile.loading && (
+            <div className="text-xs text-muted-foreground ml-2 whitespace-nowrap">Updating...</div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Experience */}
