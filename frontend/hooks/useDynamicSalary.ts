@@ -2,20 +2,13 @@
 
 import { useEffect, useState } from "react"
 
-export function useSalaryPrediction(profile: any) {
+export function useDynamicSalary(profile: any) {
   const [salary, setSalary] = useState<number | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!profile) return
-
     const controller = new AbortController()
 
-    const predict = async () => {
-      setLoading(true)
-      setError(null)
-
+    async function fetchSalary() {
       try {
         const res = await fetch("/api/predict", {
           method: "POST",
@@ -24,20 +17,16 @@ export function useSalaryPrediction(profile: any) {
           signal: controller.signal,
         })
 
-        if (!res.ok) throw new Error("Prediction failed")
+        if (!res.ok) return
 
         const data = await res.json()
         setSalary(data.predicted_salary)
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          setError("Prediction error")
-        }
-      } finally {
-        setLoading(false)
+      } catch (e) {
+        // silent fail (UI unchanged)
       }
     }
 
-    predict()
+    fetchSalary()
     return () => controller.abort()
   }, [
     profile.experience_years,
@@ -47,5 +36,5 @@ export function useSalaryPrediction(profile: any) {
     profile.skills.join(","),
   ])
 
-  return { salary, loading, error }
+  return salary
 }
